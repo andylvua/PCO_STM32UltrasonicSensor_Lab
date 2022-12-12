@@ -1,7 +1,7 @@
 # Lab 6. Ultrasonic Distance Sensor - HC-SR04
 
 > Team members: Andrii Yaroshevych, Pavlo Kryven
-> 
+>
 > Board: STM32F411E-DISCO
 
 ## Prerequisites
@@ -16,7 +16,7 @@
 
 - [STM32CubeIDE](https://www.st.com/en/development-tools/stm32cubeide.html) version 1.11.0 is highly recommended
 > **Note**
-> 
+>
 > You can use any other IDE, but you will need to configure it manually.
 
 ## Compilation and Flashing
@@ -46,7 +46,7 @@ and open the project in STM32CubeIDE.
 Connect the Discovery Kit to your PC using the USB cable and flash the project to the board as described in paragraph [Compilation and Flashing](#compilation-and-flashing)
 
 > **Note**
-> 
+>
 > You can change the measurement unit by pressing the `User` button on the board.
 
 After flashing the project, the LCD will display the distance to the nearest object in centimeters.
@@ -77,13 +77,13 @@ Steps to configure the project:
 ![Pins](./screenshots/img.png)
 
 4. Select the following modes for the pins:
-    - `PD11` - `GPIO_EXTI11`
-    - `PD10` - `GPIO_Output`
-    - `PD9` - `GPIO_Output`
-    - `PD8` - `GPIO_Output`
-    - `PB15` - `SPI2_MOSI`
-    - `PB14` - `GPIO_Output`
-    - `PB13` - `SPI2_SCK`
+- `PD11` - `GPIO_EXTI11`
+- `PD10` - `GPIO_Output`
+- `PD9` - `GPIO_Output`
+- `PD8` - `GPIO_Output`
+- `PB15` - `SPI2_MOSI`
+- `PB14` - `GPIO_Output`
+- `PB13` - `SPI2_SCK`
 
 5. Go to the `Multimedia` tab and disable `I2S2` and `I2S3`.
 
@@ -94,26 +94,27 @@ Steps to configure the project:
 ![Connectivity](./screenshots/img_2.png)
 
 In the `Parameter Settings` window, set the following parameters:
-   - `Prescaler` - `8`
+- `Prescaler` - `8`
 
 ![Parameter Settings](./screenshots/img_3.png)
 
 7. Go to the `Timers` tab and enable `TIM10` with the following parameters:
-    - `Prescaler` - `96-1`
-    - `Counter Period` - `1000`
+- `Prescaler` - `96-1`
+- `Counter Period` - `1000`
 
 ![Timers](./screenshots/img_4.png)
 
 8. After that, go to the `System Core` tab -> `NVIC` and enable the following interrupts:
-    - `TIM1 update interrupt and TIM10 global interrupt`
-    - `EXTI Line[15:10] interrupts`
+
+- `TIM1 update interrupt and TIM10 global interrupt`
+- `EXTI Line[15:10] interrupts`
 
 ![NVIC](./screenshots/img_5.png)
 
 9. In `GPIO` section select `PD11` pin and change the GPIO mode to `External Interrupt with Rising/Falling edge trigger detection`.
 
 ![GPIO](./screenshots/img_6.png)
- 
+
 10. Go to `RCC` section:
 
 ![RCC](./screenshots/img_7.png)
