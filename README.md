@@ -1,7 +1,5 @@
 # Lab 6. Ultrasonic Distance Sensor - HC-SR04
 
-# Taken from ./README_TEMPLATE.md
-
 > Team members: Andrii Yaroshevych, Pavlo Kryven
 > 
 > Board: STM32F411E-DISCO
