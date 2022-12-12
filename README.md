@@ -31,7 +31,7 @@ If you are using STM32CubeIDE, you can use the following steps to compile and fl
 2. Right-click on the project and select `Build Project`
 3. Right-click on the project and select `Run As` -> `1 STM32 C/C++ Application`
 
-### Installation
+## Installation
 
 Clone the repository to your local machine using the following command:
 
@@ -43,7 +43,7 @@ $ git clone https://github.com/ucu-cs/stm32_6-1-kryven_yaroshevych_
 
 and open the project in STM32CubeIDE.
 
-### Usage
+## Usage
 
 Connect the Discovery Kit to your PC using the USB cable and flash the project to the board as described in paragraph [Compilation and Flashing](#compilation-and-flashing)
 
