@@ -72,9 +72,10 @@ Steps to configure the project:
 
 1. Open STM32CubeMX
 2. Open the `.ioc` configuration file
-3. For the pins shown in the screenshot below, set the user labels:
+3. For the pins shown in the screenshots below, set the user labels:
 
 ![Pins](./screenshots/img.png)
+![Pins](./screenshots/img_8.png)
 
 4. Select the following modes for the pins:
 - `PD11` - `GPIO_EXTI11`
@@ -84,6 +85,7 @@ Steps to configure the project:
 - `PB15` - `SPI2_MOSI`
 - `PB14` - `GPIO_Output`
 - `PB13` - `SPI2_SCK`
+- `PA0` - `GPIO_EXTI0`
 
 5. Go to the `Multimedia` tab and disable `I2S2` and `I2S3`.
 
@@ -108,6 +110,7 @@ In the `Parameter Settings` window, set the following parameters:
 
 - `TIM1 update interrupt and TIM10 global interrupt`
 - `EXTI Line[15:10] interrupts`
+- `EXTI line0 interrupt`
 
 ![NVIC](./screenshots/img_5.png)
 
