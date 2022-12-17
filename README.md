@@ -51,9 +51,9 @@ Connect the Discovery Kit to your PC using the USB cable and flash the project t
 
 After flashing the project, the LCD will display the distance to the nearest object in centimeters.
 
-### Demonstration
-
-// TODO: add gif
+> **Warning**
+> 
+> If the distance is too big or there is some obstacle in front of the sensor, the LCD will display `Too far or blocking objects near the sensor` respectively.
 
 ## Additional tasks
 
