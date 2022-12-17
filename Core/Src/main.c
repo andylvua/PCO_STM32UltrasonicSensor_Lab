@@ -35,6 +35,13 @@ typedef enum state_t {
 	READING_DATA_S,
 	ERROR_S
 } state_t;
+
+typedef enum unit_t {
+	MILLIMETERS,
+	CENTIMETERS,
+	METERS,
+	INCHES
+} unit_t;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -43,7 +50,12 @@ typedef enum state_t {
 #define COUNTER_PERIOD 10000
 #define MEASURING_TIMEOUT_US 38000
 #define TRIG_TIME_US 16
-#define UPDATE_DELAY_MS 500
+#define UPDATE_DELAY_US 500000
+#define DEBOUNCE_THRESHOLD 50
+
+#define ECHO_START_ERR_MSG "Unexpected error while waiting for ECHO to start.\n"
+#define ECHO_STOP_ERR_MSG "Unexpected error while waiting for ECHO to stop.\n"
+#define TIMEOUT_ERR_MSG "Too far or\nblocking\nobjects near the sensor"
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -67,6 +79,9 @@ volatile uint32_t echo_finish;
 volatile uint32_t measured_time;
 
 volatile uint32_t tim10_overflows = 0;
+
+volatile int pressed = 0;
+volatile unit_t unit = CENTIMETERS;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -119,32 +134,49 @@ void udelay_TIM10(uint32_t useconds) {
 }
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
-	if (GPIO_Pin != ECHOI_Pin) {
-		return;
-	}
-
-	switch (state) {
-	case WAITING_FOR_ECHO_START_S: {
-		echo_start =  get_tim10_us();
-		state = WAITING_FOR_ECHO_STOP_S;
-		break;
-	}
-
-	case WAITING_FOR_ECHO_STOP_S: {
-		echo_finish = get_tim10_us();
-		measured_time = echo_finish - echo_start;
-
-		if (measured_time >= MEASURING_TIMEOUT_US) {
-			state = ECHO_TIMEOUT_S;
+	if (GPIO_Pin == ECHOI_Pin) {
+		switch (state) {
+		case WAITING_FOR_ECHO_START_S: {
+			echo_start =  get_tim10_us();
+			state = WAITING_FOR_ECHO_STOP_S;
 			break;
 		}
 
-		state = READING_DATA_S;
-		break;
+		case WAITING_FOR_ECHO_STOP_S: {
+			echo_finish = get_tim10_us();
+			measured_time = echo_finish - echo_start;
+
+			if (measured_time >= MEASURING_TIMEOUT_US) {
+				state = ECHO_TIMEOUT_S;
+				break;
+			}
+
+			state = READING_DATA_S;
+			break;
+		}
+
+		default:
+			state = ERROR_S;
+		}
+
+		return;
 	}
 
-	default:
-		state = ERROR_S;
+	if (GPIO_Pin == USER_BUTTON_Pin) {
+		static uint32_t last_tick;
+		if (HAL_GetTick() - last_tick < DEBOUNCE_THRESHOLD) {
+			return;
+		}
+
+		last_tick = HAL_GetTick();
+
+		if (pressed) {
+			unit = (unit_t)((unit + 1) % 4);
+		}
+
+		pressed = !pressed;
+
+		return;
 	}
 }
 /* USER CODE END 0 */
@@ -160,6 +192,36 @@ int main(void)
 	  HAL_GPIO_WritePin(TRIG_GPIO_Port, TRIG_Pin, GPIO_PIN_SET);
 	  udelay_TIM10(TRIG_TIME_US);
 	  HAL_GPIO_WritePin(TRIG_GPIO_Port, TRIG_Pin, GPIO_PIN_RESET);
+  }
+
+  inline uint32_t get_distance(uint32_t measured_time) {
+      switch (unit) {
+        case MILLIMETERS:
+            return measured_time / 5.8;
+        case CENTIMETERS:
+            return measured_time / 58;
+        case METERS:
+            return measured_time / 5800;
+        case INCHES:
+            return measured_time / 148;
+        default:
+            return 0;
+      }
+  }
+
+  inline char* get_unit_str() {
+      switch (unit) {
+        case MILLIMETERS:
+            return "mm";
+        case CENTIMETERS:
+            return "cm";
+        case METERS:
+            return "m";
+        case INCHES:
+            return "in";
+        default:
+            return "unknwn";
+      }
   }
   /* USER CODE END 1 */
 
@@ -187,6 +249,7 @@ int main(void)
   MX_SPI2_Init();
   MX_TIM10_Init();
   /* USER CODE BEGIN 2 */
+  // Display configuration
   LCD5110_display lcd1;
 
   lcd1.hw_conf.spi_handle = &hspi2;
@@ -200,6 +263,7 @@ int main(void)
 
   LCD5110_init(&lcd1.hw_conf, LCD5110_NORMAL_MODE, 0x40, 2, 3);
 
+  // Timer initialization
   TIM10_reinit();
   /* USER CODE END 2 */
 
@@ -215,7 +279,7 @@ int main(void)
 
 	  if (state == ERROR_S) {
 		  LCD5110_clear_scr(&lcd1);
-		  LCD5110_printf(&lcd1, BLACK, "Unexpected error while waiting for ECHO to start.\n");
+		  LCD5110_printf(&lcd1, BLACK, ECHO_START_ERR_MSG);
 		  continue;
 	  }
 
@@ -223,24 +287,28 @@ int main(void)
 
 	  if (state == ERROR_S) {
 		  LCD5110_clear_scr(&lcd1);
-		  LCD5110_printf(&lcd1, BLACK, "Unexpected error while waiting for ECHO to stop.\n");
+		  LCD5110_printf(&lcd1, BLACK, ECHO_STOP_ERR_MSG);
 		  continue;
 	  }
 
 
 	  if (state == ECHO_TIMEOUT_S) {
 		  LCD5110_clear_scr(&lcd1);
-		  LCD5110_printf(&lcd1, BLACK, "Timeout.\nMove blocking objects away from the\nsensor");
+		  LCD5110_printf(&lcd1, BLACK, TIMEOUT_ERR_MSG);
 
 	  }
 
 	  if (state == READING_DATA_S) {
-		  uint32_t distance = measured_time/58;
+          HAL_NVIC_DisableIRQ(EXTI15_10_IRQn);
+          uint32_t current_measured_time = measured_time;
+          HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 		  LCD5110_clear_scr(&lcd1);
-		  LCD5110_printf(&lcd1, BLACK, "Distance:\n%lu cm\n", distance);
+		  LCD5110_printf(&lcd1, BLACK, "Distance:\n%lu %s",
+				  get_distance(current_measured_time),
+				  get_unit_str());
 	  }
 
-	  HAL_Delay(UPDATE_DELAY_MS);
+	  udelay_TIM10(UPDATE_DELAY_US);
 
     /* USER CODE END WHILE */
     MX_USB_HOST_Process();
@@ -500,11 +568,11 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Alternate = GPIO_AF5_SPI2;
   HAL_GPIO_Init(PDM_OUT_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PA0 */
-  GPIO_InitStruct.Pin = GPIO_PIN_0;
-  GPIO_InitStruct.Mode = GPIO_MODE_EVT_RISING;
+  /*Configure GPIO pin : USER_BUTTON_Pin */
+  GPIO_InitStruct.Pin = USER_BUTTON_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  HAL_GPIO_Init(USER_BUTTON_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : I2S3_WS_Pin */
   GPIO_InitStruct.Pin = I2S3_WS_Pin;
@@ -559,6 +627,9 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(OTG_FS_OverCurrent_GPIO_Port, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI0_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI0_IRQn);
+
   HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 
